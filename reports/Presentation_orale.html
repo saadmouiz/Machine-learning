@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PACTE — Classification d’objets routiers</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #38bdf8;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: "Segoe UI", sans-serif; }
+    .slide {
+      min-height: 100vh;
+      padding: 8vh 10vw;
+      border-bottom: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    h1 { font-size: 2.4rem; margin: 0 0 0.4rem; }
+    h2 { color: var(--accent); font-size: 1.8rem; margin: 0 0 1rem; }
+    p, li { font-size: 1.15rem; line-height: 1.5; color: var(--text); }
+    .muted { color: var(--muted); }
+    .tag { color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.85rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+    .card { background: var(--card); padding: 1rem 1.1rem; border-radius: 12px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border-bottom: 1px solid #334155; padding: 0.55rem 0.4rem; text-align: left; }
+    .footer { position: sticky; bottom: 0; padding: 0.4rem 1rem; font-size: 0.8rem; color: var(--muted); background: #0b1220; }
+    kbd { background: #334155; padding: 0.1rem 0.4rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <div class="tag">Projet PACTE · Machine Learning · 4e année</div>
+    <h1>Classification d’objets routiers par Machine Learning</h1>
+    <p class="muted">Pour les véhicules autonomes — identification automatique d’usagers et de véhicules à partir d’une image.</p>
+    <p>Image → <strong>Voiture (92 %)</strong> &nbsp;·&nbsp; Image → <strong>Piéton (87 %)</strong></p>
+  </section>
+
+  <section class="slide">
+    <h2>1. Problème</h2>
+    <p>La perception d’un véhicule autonome localise puis <strong>nomme</strong> les objets. Nous traitons la deuxième étape : classer un crop d’objet routier.</p>
+    <div class="grid">
+      <div class="card">voiture</div>
+      <div class="card">piéton</div>
+      <div class="card">cycliste</div>
+      <div class="card">moto</div>
+      <div class="card">bus</div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <h2>2. Données — Pascal VOC 2007</h2>
+    <table>
+      <tr><th>Critère</th><th>Choix</th></tr>
+      <tr><td>Provenance</td><td>Challenge académique Oxford, photos réelles annotées</td></tr>
+      <tr><td>Construction</td><td>Crops des boîtes englobantes (comme après un détecteur)</td></tr>
+      <tr><td>Résolution</td><td>64 × 64 RGB après redimensionnement</td></tr>
+      <tr><td>Pourquoi pas KITTI / BDD</td><td>Trop lourds pour le cadre PACTE</td></tr>
+      <tr><td>Pourquoi pas GTSRB</td><td>Panneaux seulement</td></tr>
+    </table>
+    <p class="muted">Point de vigilance : « cycliste » = classe VOC <em>bicycle</em>.</p>
+  </section>
+
+  <section class="slide">
+    <h2>3. Pipeline</h2>
+    <ol>
+      <li>Nettoyage (objets difficiles / trop petits)</li>
+      <li>Resize 64×64 + normalisation</li>
+      <li>Split groupé par image source, environ 70 / 15 / 15</li>
+      <li>Descripteurs HOG + couleur + LBP</li>
+      <li>PCA 95 % puis k-NN / SVM / Random Forest</li>
+      <li>Choix du modèle sur la validation, chiffres sur le test</li>
+    </ol>
+  </section>
+
+  <section class="slide">
+    <h2>4. Modèles comparés</h2>
+    <div class="grid">
+      <div class="card"><strong>k-NN</strong><p>Baseline. Vote des voisins dans l’espace des descripteurs.</p></div>
+      <div class="card"><strong>SVM RBF</strong><p>Référence vision classique. Pondération des classes.</p></div>
+      <div class="card"><strong>Random Forest</strong><p>Ensemble d’arbres, robuste, importances de variables.</p></div>
+    </div>
+    <p>Métriques : Accuracy, Precision, Recall, F1 macro, matrices de confusion.</p>
+  </section>
+
+  <section class="slide">
+    <h2>5. Résultats à commenter à l’oral</h2>
+    <p>Ouvrir <code>reports/figures/comparaison_modeles.png</code> et la matrice du meilleur modèle.</p>
+    <ul>
+      <li>Quel modèle gagne en F1 validation ?</li>
+      <li>L’accuracy est-elle trompeuse à cause du déséquilibre ?</li>
+      <li>Quelles classes ont le plus mauvais rappel ?</li>
+    </ul>
+    <p class="muted">Les chiffres concrets sont ceux de votre exécution (<code>models/metrics.json</code>).</p>
+  </section>
+
+  <section class="slide">
+    <h2>6. Classes difficiles</h2>
+    <ul>
+      <li><strong>Moto ↔ cycliste</strong> : même géométrie deux-roues à basse résolution.</li>
+      <li><strong>Bus ↔ voiture</strong> : même « boîte » véhicule, échelle ambiguë.</li>
+      <li><strong>Piéton</strong> : poses, vêtements, occlusions.</li>
+    </ul>
+    <p>Ces confusions sont réalistes pour une caméra seule, sans LiDAR ni tracking.</p>
+  </section>
+
+  <section class="slide">
+    <h2>7. Démonstration</h2>
+    <p>Prédiction sur des images du jeu de test, jamais vues à l’apprentissage.</p>
+    <p><kbd>python -m src.predict --demo</kbd></p>
+    <p>Sortie attendue :</p>
+    <div class="card">pieton_1.jpg → Pieton (87 %)</div>
+  </section>
+
+  <section class="slide">
+    <h2>8. Conclusion</h2>
+    <ul>
+      <li>Un classifieur ML classique, après HOG, suffit à démontrer la brique « reconnaissance » d’une pile AV.</li>
+      <li>La comparaison multi-modèles + métriques macro respecte le cahier des charges.</li>
+      <li>Limite principale : pas de détection, pas de CNN, résolution 64×64.</li>
+      <li>Perspective : détecter puis classer en embarqué (pipeline deux étages).</li>
+    </ul>
+    <p class="muted">Merci — questions ?</p>
+  </section>
+  <div class="footer">Défiler pour avancer · Fichier autonome, ouvrir dans le navigateur</div>
+</body>
+</html>
